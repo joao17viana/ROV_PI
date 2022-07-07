@@ -1,0 +1,1 @@
+global w, a, d, s, altera, nova_profundidade, profundidade_atual, velocidade, luz, sos, rot_e, rot_d, x, y, ser, mutex, Vprof
