@@ -12,13 +12,13 @@ import serial
 
 frente = 1
 tras = -1
-Potencia_Max = 50
+Potencia_Max = 30
 Potencia_Total_Max = 80
 tol = 7.5                        ##Em cm
 Potencia_Min = 10
-R_trans = 14/50
+R_trans = 14/4
 Base = 150
-P_estavel = 10 * R_trans + Base
+P_estavel = 10 / R_trans + Base
 Step_Corrente = 0.42
 Delay_Corrente = 0.1
 Delay_Rotar = 1
@@ -36,6 +36,9 @@ pino_luz = 18
 def Watt_To_Amp(P):
     return int(P * 0.0832)
 
+def Amp_To_Watt(A):
+    return(int(A / 0.0832))
+
 ##Manda ativar um determinado motor
 ##Argumentos: Mot, O motor que se pretende ativar
 ##            Sinal, O Sinal PWM que é suposto enviar ao motor para este reagir da maneira que queremos
@@ -44,16 +47,15 @@ def Watt_To_Amp(P):
 def Ativar_Motor(Mot, Sinal, pos):
     ajuste = 1                    
     if(abs((Sinal-Base) * R_trans) > Mot.Pot_Limit and (Mot.Pot_Limit != 0)):
-        Sinal = Mot.Pot_Limit * R_trans + Base
+        Sinal = (Mot.Pot_Limit / R_trans) + Base
     elif(abs((Sinal-Base) * R_trans) > Mot.Pot_Disponivel):                            ##Limita a potencia fornecida aos motores
-
-        Sinal = Mot.Pot_disponivel * R_trans + Base 
+        Sinal = (Mot.Pot_disponivel / R_trans) + Base 
     
-    if(Sinal < Base and ((Mot.Pot * R_trans) + Base)  >= Base):                        ##Se Pedir uma mudança de sentido
+    if(Sinal < Base and ((Mot.Pot / R_trans) + Base)  >= Base):                        ##Se Pedir uma mudança de sentido
         Mot = Desliga_Motor(Mot, pos)
-    elif((Sinal > Base and ((Mot.Pot * R_trans) + Base) <=  Base)):
+    elif((Sinal > Base and ((Mot.Pot / R_trans) + Base) <=  Base)):
         Mot = Desliga_Motor(Mot, pos)
-    diff = (Watt_To_Amp(abs(Sinal-Base) /R_trans)) - Watt_To_Amp(Mot.Pot)              ##Mede a diferença de correntes, e faz um aumemento step
+    diff = (Watt_To_Amp(abs(Sinal-Base) * R_trans)) - Watt_To_Amp(Mot.Pot)              ##Mede a diferença de correntes, e faz um aumemento step
     if(diff < 0):
         ##Se for diminuição 
         ajuste = -1
@@ -61,17 +63,16 @@ def Ativar_Motor(Mot, Sinal, pos):
     N_Step = int(diff/Step_Corrente)
     if(N_Step > 1):
         for Am in range(0,N_Step):
-            Sinal_temp = ((Sinal-Base) *R_trans) + (Am + 1)*Step_Corrente*ajuste
-            #wiringpi.pwmWrite(Mot.ID, int(Sinal_temp))
+            Sinal_temp = (((Sinal-Base) * R_trans) + Amp_To_Watt((Am + 1)*Step_Corrente*ajuste))/R_trans
             Send_to_Arduino(str(pos), str(Sinal_temp))
             time.sleep(Delay_Corrente)
 
+    print("Mandei para o arduino" + str(pos))
 
-    print("Mandei para o arduino")
     Send_to_Arduino(str(pos), str(Sinal))                                               ##Manda o sinal PWM do motor e a posição que é preciso ativar
     time.sleep(Delay_Corrente)                                                          ##Dá um pequeno delay
     Mot.Ativo = 1                                                                       ##Ativa o parametro do motor
-    Mot.Pot = (Sinal - Base)/R_trans                                                    ##Guarda a informação da potencia que está a emitir
+    Mot.Pot = (Sinal - Base) * R_trans                                                    ##Guarda a informação da potencia que está a emitir
     return Mot
 
 
@@ -116,7 +117,7 @@ def Limpa_Matriz(Motores):
 ##            Motores, é o vetor com todos os motores carregados
 ##Retorna a matriz inicial se não houver alteração ou a nova caso exista alteração e o vetor dos motores atualizado
 def Matriz_Atc(matriz_mov, Motores):
-    print("Atualizando Matriz")
+    ##print("Atualizando Matriz")
     matriz_mov_nova = Definir.Ler_inputs_matriz()                                       ##Le a nova matriz
     if(matriz_mov_nova != matriz_mov):                                                  ##Compara as matrizes
         Motores = Limpa_Matriz(Motores)
@@ -183,12 +184,12 @@ def Traduzir_Matriz(Matriz, Motores):
 def Traduzir_Valores(sent):
     #Vai até 40 a variação
     if(sent == frente):                                                         
-        inc = var.velocidade /100 * Potencia_Max * R_trans      
+        inc = var.velocidade /100 * Potencia_Max / R_trans      
         if (inc < 3):                                                           ##Define o minimo 
             inc = 3
         return int(Base + inc)
     elif(sent == tras):
-        inc = var.velocidade /100 * Potencia_Max * R_trans
+        inc = var.velocidade /100 * Potencia_Max / R_trans
         if (inc < 3):                                                           ##Define o minimo
             inc = 3
         return int(Base - inc)
@@ -237,13 +238,13 @@ def Degrau(prof_sen, prof):
     #Aqui vou definir os valores limitantes quando se aproxima
     Total = 1
     Prox = 0.75
-    Mt_prox = 0.25
+    Mt_prox = 0.4
     Deg = prof - prof_sen   
     if(Deg < 0):
         Deg = -1 * Deg
-    if(Deg >= 30):                                          ##Se estiver longe, não diminui
+    if(Deg >= 50):                                          ##Se estiver longe, não diminui
         return Total
-    elif(Deg >= 15):                                        ##Se a aproximar-se, diminuis com um fator de 0.75
+    elif(Deg >= 25):                                        ##Se a aproximar-se, diminuis com um fator de 0.75
         return Prox
     else:
         return Mt_prox                                      ##Se estiver muito proximo diminui a velocidade com um fator de 0.25
@@ -257,25 +258,33 @@ def Degrau(prof_sen, prof):
 ##Retorna o vetor de motores com eles atualizados
 def Altera_Profundidade(Motores, prof):
     prof_sen = Definir.Ler_Profundidade()
-    while(prof_sen + tol <= prof):                                              ##Se a profundidade atual for menor que a pretendida
-        Fator_dm = Degrau(prof_sen, prof)   
-        Pot = Motores[0].Pot_Disponivel * Fator_dm * var.velocidade / 100       ##Calcula a potencia que é pretendida fornecer ao motor
-        if(Motores[0].Ativo == 0 or Motores[0].Pot != (Pot * Fator_dm)):        ##Ativa os motores
-            Signal = Pot * R_trans + Base
-            Motores[0] = Ativar_Motor(Motores[0], Signal, 0)
-        if(Motores[1].Ativo == 0  or Motores[1].Pot != (Pot * Fator_dm)):
-            Signal = Pot * R_trans + Base
-            Motores[1] = Ativar_Motor(Motores[1], Signal, 1)
-        prof_sen = Definir.Ler_Profundidade()
-    while(prof_sen + tol >= prof):                                               ##Se a profundidade atual for maior que a pretendida
-        Fator_dm = Degrau(prof_sen, prof)
-        Pot = Motores[0].Pot_Disponivel * Fator_dm * var.velocidade / 100        ##Calcula a potencia que é pretendida enviar
-        if(Motores[0].Ativo == 0 or Motores[0].Pot != (Pot * Fator_dm)):         ##Ativa os motores
-            Signal =  Base - (Pot * R_trans)
-            Motores[0] = Ativar_Motor(Motores[0], Signal, 0)
-        if(Motores[1].Ativo == 0 or Motores[1].Pot != (Pot * Fator_dm)):
-            Signal = Base - (Pot * R_trans)
-            Motores[1] = Ativar_Motor(Motores[1], Signal, 1)
-        prof_sen = Definir.Ler_Profundidade()
+    if(prof_sen + tol <= prof):
+        while(prof_sen + tol <= prof):                                              ##Se a profundidade atual for menor que a pretendida
+            Fator_dm = Degrau(prof_sen, prof)   
+            Pot = Motores[0].Pot_Disponivel * Fator_dm * var.velocidade / 100       ##Calcula a potencia que é pretendida fornecer ao motor
+            if(Motores[0].Ativo == 0 or round(Motores[0].Pot) != round(Pot)):                     ##Ativa os motores
+                print("Comparei" + str(Motores[0].Pot) + " com " + str(Pot))
+                Signal = (Pot / R_trans) + Base
+                Motores[0] = Ativar_Motor(Motores[0], Signal, 0)
+            if(Motores[1].Ativo == 0  or round(Motores[1].Pot) != round(Pot)):
+                Signal = (Pot / R_trans) + Base
+                Motores[1] = Ativar_Motor(Motores[1], Signal, 1)
+            prof_sen = Definir.Ler_Profundidade()
+    elif(prof_sen + tol >= prof):
+        while(prof_sen + tol >= prof):                                               ##Se a profundidade atual for maior que a pretendida
+            Fator_dm = Degrau(prof_sen, prof)
+            Pot = Motores[0].Pot_Disponivel * Fator_dm * var.velocidade / 100        ##Calcula a potencia que é pretendida enviar
+            if(Motores[0].Ativo == 0 or round(abs(Motores[0].Pot)) != round(Pot)):                      ##Ativa os motores
+                print("Comparei" + str(Motores[0].Pot) + " com " + str(Pot))
+                Signal =  Base - (Pot / R_trans)
+                Motores[0] = Ativar_Motor(Motores[0], Signal, 0)
+            if(Motores[1].Ativo == 0 or round(abs(Motores[1].Pot)) != round(Pot)):
+                Signal = Base - (Pot / R_trans)
+                Motores[1] = Ativar_Motor(Motores[1], Signal, 1)
+            prof_sen = Definir.Ler_Profundidade()
+    print("saí da altera profundidade")
+    Desliga_Motor(Motores[0], 0)
+    Desliga_Motor(Motores[1], 1)
+    var.altera = 0
     return Motores
 

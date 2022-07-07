@@ -96,13 +96,13 @@ def read_arduino():
                 #var.y = str(randint(100,400))
                 #print("Sending data from sensors")
                 line = line[0:23]                                        #String "line" example: 0953.00/27.97/05.00/0/0/180/304/
-                print(line)
+                #print(line)
                 if(len(line) == 22):
                     line = line[0:23] + var.x + "/" + var.y + "/"
-                    print(line)
-                    var.profundidade_atual = float(line[14:19]) * 100    #Update depth and convert to cm
-                    var.Vprof = Definir.Atualiza_Vetor_prof(var.profundidade_atual, var.Vprof)
-                    print(var.profundidade_atual)                                      
+                    #print(line)
+                    #var.profundidade_atual = float(line[14:19]) * 100    #Update depth and convert to cm
+                    #var.Vprof = Definir.Atualiza_Vetor_prof(var.profundidade_atual, var.Vprof)
+                    #print(var.profundidade_atual)                                      
                     client.publish("test",line)                          #Send "line" to interface       
                     client.subscribe("motores")                          #Subscribe the topic where the interface is sending the inputs
             if exit_event.is_set():
@@ -153,6 +153,15 @@ class thread2(threading.Thread):
         lamp = Definir.SetUp_Lampada()
         lamp_bool = 0
         while(1):
+            if(var.altera == 1):
+                var.profundidade_atual = 0
+                while(1):
+                    var.profundidade_atual = var.profundidade_atual + 2
+                    time.sleep(0.5)
+                    print(var.profundidade_atual)
+                    if(var.profundidade_atual >= 180):
+                        var.profundidade_atual = 0
+                    
             time.sleep(0.5)            #Comentado pelo roberto
             Matriz, Motor = Motores.Matriz_Atc(Matriz,Motor)
             if(var.rot_e):
@@ -191,7 +200,7 @@ class thread3(threading.Thread):
                     time.sleep(0.1)
                     aux = Definir.Det_Vetor_Medias(var.Vprof)
                     sentido = Definir.Det_tendencia(aux)
-                    print(aux)
+                    ## print(aux)
                     if(sentido != -1):
                         Motor = Motores.Manter_Profundidade(Motor, sentido)
                         tempo = time.time()
@@ -203,6 +212,7 @@ class thread3(threading.Thread):
                         while(tempo + 1.2 > time.time()):                   ##Bussy Wait, espera que o vetor atualize 
                             if(altera == 1):break
                 Motor = Motores.Altera_Profundidade(Motor, var.nova_profundidade)
+                
                 
                 
 
@@ -560,7 +570,7 @@ def Validacao_pos(ids, list_ids, N_frames_val, max_ids, Pos_x, Pos_y, Pos_rot):
 
     if(len(ids) > 1):
         for i in range(len(ids)):
-            indice = encontra_id(ids[i][0], mas_ids, list_ids)
+            indice = encontra_id(ids[i][0], max_ids, list_ids)
             desvio_padrao_x[i] = statistics.stdev(Pos_x[indice][1:N_frames_val])
             desvio_padrao_y[i] = statistics.stdev(Pos_y[indice][1:N_frames_val])
             desvio_padrao_rot[i] = statistics.stdev(Pos_rot[indice][1:N_frames_val])

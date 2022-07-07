@@ -85,6 +85,7 @@ def Ver_Pot_Maxima(Mot):
 ##Retorna a profundidade atual
 def Ler_Profundidade():
     return var.profundidade_atual
+    
 
 
 ##Cria o vetor e inicializa a 0 que vai conter as ultimas 12 profundidades lidas
@@ -110,7 +111,7 @@ def Atualiza_Vetor_prof(nova_prof, vetor):
 #Retorna um vetor de tamanho 3 com as tres medias calculadas
 def Det_Vetor_Medias(vetor):
     Vetor_Media = []                                        ##Cria um novo vetor para encher com as medias
-    for i in range(0, (int(tam_vet)/int(div_vet))):         ##Para cada uma das divisões
+    for i in range(0, round((int(tam_vet)/int(div_vet)))):         ##Para cada uma das divisões
         soma = 0   
         for j in range(0, div_vet-1):                       ##Soma os valores pretendidos
             soma = soma + vetor[j*div_vet + j]
