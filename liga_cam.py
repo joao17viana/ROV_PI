@@ -7,7 +7,7 @@ import time
 #str = ('videotestsrc ! videoconvert ! appsink')
 #str = ("libcamerasrc ! 'video/x-raw,width=1280,height=720' ! \glimagesink")
 str_pipe = "v4l2src ! videoconvert ! appsink"
-cap = cv.VideoCapture(str_pipe)
+cap = cv.VideoCapture(0)
 
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)

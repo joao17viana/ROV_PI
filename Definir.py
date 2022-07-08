@@ -45,7 +45,7 @@ def CarregaMotores():
             Motores[M].ID = int(aux[0])
             Motores[M].dist = int(aux[1])
             Motores[M].Pot_Limit =  0  #int(aux[2])
-            Motores[M].Pot_Disponivel = int(aux[3])
+            Motores[M].Pot_Disponivel = 40
             Motores[M].Ativo = 0
 
     f.close

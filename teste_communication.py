@@ -13,7 +13,7 @@ import numpy as np
 from random import randint
 from subprocess import call
 from subprocess import run
-#time.sleep(120)
+#time.sleep(10)
 
 #Flag de shutdown
 exit_event= threading.Event()
@@ -84,7 +84,7 @@ def read_arduino():
     var.ser.reset_input_buffer()                                 #Reset the input buffer
     time.sleep(2)
     while True:
-        time.sleep(0.1)                                        
+        time.sleep(0.01)                                        
         if var.ser.in_waiting > 0 and var.mutex == 0:            #Verifies if there's something available on serial
             #time.sleep(1)
             line = var.ser.readline().decode('utf-8').rstrip()   #Read and decode what Arduino have sent to serial
@@ -100,6 +100,7 @@ def read_arduino():
                 if(len(line) == 22):
                     line = line[0:23] + var.x + "/" + var.y + "/"
                     #print(line)
+                    
                     #var.profundidade_atual = float(line[14:19]) * 100    #Update depth and convert to cm
                     #var.Vprof = Definir.Atualiza_Vetor_prof(var.profundidade_atual, var.Vprof)
                     #print(var.profundidade_atual)                                      
@@ -152,17 +153,8 @@ class thread2(threading.Thread):
         #print("Estão criadas todas as condiçoes de trabalho")
         lamp = Definir.SetUp_Lampada()
         lamp_bool = 0
-        while(1):
-            if(var.altera == 1):
-                var.profundidade_atual = 0
-                while(1):
-                    var.profundidade_atual = var.profundidade_atual + 2
-                    time.sleep(0.5)
-                    print(var.profundidade_atual)
-                    if(var.profundidade_atual >= 180):
-                        var.profundidade_atual = 0
-                    
-            time.sleep(0.5)            #Comentado pelo roberto
+        while(1):                            
+            time.sleep(0.1)            #Comentado pelo roberto
             Matriz, Motor = Motores.Matriz_Atc(Matriz,Motor)
             if(var.rot_e):
                 Motor = Motores.Limpa_Matriz(Motor)
@@ -596,7 +588,30 @@ def Validacao_pos(ids, list_ids, N_frames_val, max_ids, Pos_x, Pos_y, Pos_rot):
 
     return [Pos_x_final, Pos_y_final, Pos_rot_final]
         
-
+class thread5(threading.Thread):
+    def __init__(self):        
+        threading.Thread.__init__(self)
+        
+    def run(self):
+        print(var.altera)
+        #Este codigo comentado é para testar uma variaçao de profundidade
+        while(1):    
+            if(var.altera == 1):
+                print("atual " + str(var.profundidade_atual))
+                var.profundidade_atual = 0
+                while(1):                
+                    var.profundidade_atual = var.profundidade_atual + 2
+                    time.sleep(0.5)
+                    print(var.profundidade_atual)
+                    if(var.profundidade_atual >= 180):            
+                        while(1):
+                            var.profundidade_atual = var.profundidade_atual - 2
+                            time.sleep(0.5)
+                            print(var.profundidade_atual)
+                            if(var.profundidade_atual <= 0):
+                                break
+                    
+            
         
             
 
@@ -608,6 +623,8 @@ t3 = thread3()
 t3.start()
 t4 = thread4()
 #t4.start()
+t5 = thread5()
+t5.start()
 #call("raspivid -n -t 0 -rot 180 -w 1440 -h 720 -fps 30 -b 6000000 -o - | gst-launch-1.0 -e -vvvv fdsrc ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink clients=169.254.203.43:5600", shell = True)
 
 #threadli0st.append(Thread(target=thread3))

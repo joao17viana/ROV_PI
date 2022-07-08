@@ -35,20 +35,27 @@ camSet = ('libcamerasrc ! videoconvert ! appsink')
 
 print("consegui dar camset")
 
-camSet = ("raspivid -n -t 0 -rot 180 -w 1440 -h 720 -fps 30 -b 6000000 -o - | gst-launch-1.0 -e -vvvv fdsrc ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink clients=169.254.203.43:5600")
+#camSet = ("raspivid -n -t 0 -rot 180 -w 1440 -h 720 -fps 30 -b 6000000 -o - | gst-launch-1.0 -e -vvvv fdsrc ! h264parse ! rtph264pay pt=96 config-interval=5 ! udpsink clients=169.254.203.43:5600")
 cap= cv2.VideoCapture(0)
 print("antes de testar o out")
 
 if not cap.isOpened():
     print("não consegui inicar video")
 
-#camSet_out_teste_wifi = 'appsrc  ! decodebin ! videoconvert ! x264enc !  rtph264pay pt=96 config-interval=5 ! udpsink clients=169.254.203.43:5600'
-camSet_out_teste_wifi = 'appsrc ! videoconvert ! x264enc tune=zerolatency noise-reduction=10000 bitrate=2048 speed-preset=superfast ! rtph264pay config-interval=1 pt=96 ! udpsink clients=169.254.203.43 port=5600'
+camSet_out_teste_wifi = ' appsrc  ! video/x-raw,format=BGR ! videoconvert ! x264enc !  rtph264pay ! rtpjitterbuffer latency=0 ! application/x-rtp,media=video,encoding-name=H264 ! udpsink clients=169.254.203.43:5600'
+#camSet_out_teste_wifi = ' appsrc emit-signals=True is-live=True ! video/x-raw ! queue ! videoconvert ! udpsink clients=169.254.203.43:5600'
+#camSet_out_teste_wifi = "appsrc ! video/x-raw  ! udpsink clients=169.254.203.43:5600"
+#camSet_out_teste_wifi = 'appsrc ! x264enc ! mpegtsmux ! udpsink host=localhost port=5000'
+#camSet_out_teste_wifi = "appsrc ! videoconvert ! x264enc noise-reduction=10000 tune=zerolatency byte-stream=true ! h264parse ! mpegtsmux ! rtpmp2tpay ! udpsink  clients=169.254.203.43:5600"
+#camSet_out_teste_wifi = 'appsrc ! queue ! videoconvert ! video/x-raw ! x264enc ! h264parse ! rtph264pay ! udpsink clients=169.254.203.43:5600 sync=false'
+#camSet_out_teste_wifi = 'appsrc ! videoconvert ! x264enc tune=zerolatency noise-reduction=10000 bitrate=2048 speed-preset=superfast ! rtph264pay config-interval=1 pt=96 ! udpsink clients=169.254.203.43:5600'
 #camSet_out_teste_wifi = 'appsrc ! decodebin ! videoconvert ! openh264enc ! rtph264pay name=pay0 pt=96 config-interval=1 ! udpsink clients=169.254.203.43:5600'
 #teste_tcp = 'appsrc ! videoconvert ! v4l2h264enc ! video/x-h264,level=(string)4 ! h264parse ! matroskamux ! tcpserversink clients=169.254.203.43 port=5600'
 #camSet_out_teste_wifi = ("appsrc ! videoconvert ! udpsink clients=169.254.203.43:5600 ")
 fourcc = cv2.VideoWriter_fourcc(*'H264')
-out = cv2.VideoWriter(camSet_out_teste_wifi, cv2.CAP_GSTREAMER, fourcc, float(52), (640,480), True)
+#out = cv2.VideoWriter(camSet_out_teste_wifi, cv2.CAP_GSTREAMER, 0, 30, (640,480), True)
+out = cv2.VideoWriter(camSet_out_teste_wifi ,fourcc , 30, (640, 480), True)
+
 
 if not out.isOpened():
     print("não consegui enviar video")
@@ -76,8 +83,7 @@ while True:
         #cv2.imshow('nanoCam',frame)
         prev_frame = new_frame
         cv2.imshow("sender", frame)
-        if frame is not None:
-            out.write(frame)
+        out.write(frame)
         
     if cv2.waitKey(1)==ord('q'):
         break

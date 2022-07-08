@@ -12,13 +12,15 @@ import serial
 
 frente = 1
 tras = -1
-Potencia_Max = 30
+Potencia_Max = 40
 Potencia_Total_Max = 80
 tol = 7.5                        ##Em cm
 Potencia_Min = 10
-R_trans = 14/4
+R_trans_T100 = 40/14
+R_trans_T200 = 50/19
 Base = 150
-P_estavel = 10 / R_trans + Base
+P_estavel_Z = 10 / R_trans_T100 + Base
+P_estavel_XY = 10 / R_trans_T200 + Base
 Step_Corrente = 0.42
 Delay_Corrente = 0.1
 Delay_Rotar = 1
@@ -45,7 +47,12 @@ def Amp_To_Watt(A):
 ##            pos, a posição do motor no vetor, isto serve para facilitar o envio
 ##Retorna o motor que foi ativo
 def Ativar_Motor(Mot, Sinal, pos):
-    ajuste = 1                    
+    ajuste = 1
+    if(pos == 2 or pos == 3):
+        print("T200")
+        R_trans = R_trans_T200
+    else:
+        R_trans = R_trans_T100
     if(abs((Sinal-Base) * R_trans) > Mot.Pot_Limit and (Mot.Pot_Limit != 0)):
         Sinal = (Mot.Pot_Limit / R_trans) + Base
     elif(abs((Sinal-Base) * R_trans) > Mot.Pot_Disponivel):                            ##Limita a potencia fornecida aos motores
@@ -67,7 +74,7 @@ def Ativar_Motor(Mot, Sinal, pos):
             Send_to_Arduino(str(pos), str(Sinal_temp))
             time.sleep(Delay_Corrente)
 
-    print("Mandei para o arduino" + str(pos))
+    print("Mandei para o arduino" + str(pos) + str(Sinal))
 
     Send_to_Arduino(str(pos), str(Sinal))                                               ##Manda o sinal PWM do motor e a posição que é preciso ativar
     time.sleep(Delay_Corrente)                                                          ##Dá um pequeno delay
@@ -148,49 +155,57 @@ def Send_to_Arduino(pos, sinal):
 ##Retorna o vetor que contem todos os motores 
 def Traduzir_Matriz(Matriz, Motores):
 
-    Definir.Ver_Pot_Maxima(Motores[2])
-    Definir.Ver_Pot_Maxima(Motores[3])
-    Definir.Ver_Pot_Maxima(Motores[4])
-    Definir.Ver_Pot_Maxima(Motores[5])
-    Definir.Limitar_portencia(Motores)
+    #Definir.Ver_Pot_Maxima(Motores[2])
+    #Definir.Ver_Pot_Maxima(Motores[3])
+    #Definir.Ver_Pot_Maxima(Motores[4])
+    #Definir.Ver_Pot_Maxima(Motores[5])
+    #Definir.Limitar_portencia(Motores)
     for linha in range(0, len(Matriz)):
         for col in range(0, len(Matriz)):                                           ##Ativa os motores correspondentes
             if(Matriz[linha][col] == 1):
                 if(linha == 0):
-                    Sinal = Traduzir_Valores(frente)
+                    Sinal = Traduzir_Valores(frente, 2)
                     Motores[2] = Ativar_Motor(Motores[2], int(Sinal), 2)
                     Motores[3] = Ativar_Motor(Motores[3], int(Sinal), 3)                    
                     
                 if(linha == 2):
-                    Sinal = Traduzir_Valores(tras)
+                    Sinal = Traduzir_Valores(tras, 2)
                     Motores[2] = Ativar_Motor(Motores[2], int(Sinal), 2)
                     Motores[3] = Ativar_Motor(Motores[3], int(Sinal), 3)
                     
                 if(col == 0):
-                    Sinal = Traduzir_Valores(frente)
+                    Sinal = Traduzir_Valores(frente, 4)
                     Motores[4] = Ativar_Motor(Motores[4], int(Sinal), 4)
                     Motores[5] = Ativar_Motor(Motores[5], int(Sinal), 5)
                     
                 if(col == 2):
-                    Sinal = Traduzir_Valores(tras)
+                    Sinal = Traduzir_Valores(tras, 4)
                     Motores[4] = Ativar_Motor(Motores[4], int(Sinal), 4)
                     Motores[5] = Ativar_Motor(Motores[5], int(Sinal), 5)
                     
     return Motores
 
 ##Calcula o valor do sinal PWM consoanete a variavel global velocidade e o sentido que recebe
+##Aviso: A razão de transormaçao nesta parte do codigo depende do motor que se está a controlar,
+##       só está R_TransT200 porque ficamos sem os T100 para os eixos XY
 ##Argumentos sent, o sentido do movimento, se é pretendido o movimento para frente ou para tras
 ##Retorna O valor do sinal que será enviado para o arduino
-def Traduzir_Valores(sent):
+def Traduzir_Valores(sent, R_trans):
     #Vai até 40 a variação
+    if(R_trans == 2 or R_trans == 3):
+        R_trans = R_trans_T200
+    else:
+        R_trans = R_trans_T100
     if(sent == frente):                                                         
-        inc = var.velocidade /100 * Potencia_Max / R_trans      
+        inc = var.velocidade /100 * Potencia_Max / R_trans
+        print(inc)
         if (inc < 3):                                                           ##Define o minimo 
             inc = 3
         return int(Base + inc)
     elif(sent == tras):
-        inc = var.velocidade /100 * Potencia_Max / R_trans
+        inc = (var.velocidade /100) * (Potencia_Max / R_trans)
         if (inc < 3):                                                           ##Define o minimo
+            print(inc)
             inc = 3
         return int(Base - inc)
     return int(Base)
@@ -205,8 +220,8 @@ def Rotar_XY(Motores, sentido):
     Definir.Ver_Pot_Maxima(Motores[3])
     Definir.Limitar_portencia(Motores)
     #A partida sentido = 1 é clockwise  
-    Sin = Base - sentido * ((P_estavel - Base) * 2.5)                            ##Define o sinal que é fornecido a um motor
-    Sin_C = Base + sentido * ((P_estavel - Base) * 2.5)                          ##O outro motor vai ter o sinal contrário
+    Sin = Base - sentido * ((P_estavel_XY - Base) * 2)                            ##Define o sinal que é fornecido a um motor
+    Sin_C = Base + sentido * ((P_estavel_XY - Base) * 2)                          ##O outro motor vai ter o sinal contrário
     Motores[2] = Ativar_Motor(Motores[2], Sin, 2)
     Motores[3] = Ativar_Motor(Motores[3], Sin_C, 3)
     time.sleep(Delay_Rotar)
@@ -225,7 +240,7 @@ def Rotar_XY(Motores, sentido):
 ##Retorna o vetor dos motores com os motores atualizados
 def Manter_Profundidade(Motores, sentido):
     ##Ler profundidade
-    Sin = Base + sentido * ((P_estavel - Base) )
+    Sin = Base + sentido * ((P_estavel_Z - Base) )
     Motores[0] = Ativar_Motor(Motores[0], Sin, 0)
     Motores[1] = Ativar_Motor(Motores[1], Sin, 1)
     return Motores
@@ -258,33 +273,33 @@ def Degrau(prof_sen, prof):
 ##Retorna o vetor de motores com eles atualizados
 def Altera_Profundidade(Motores, prof):
     prof_sen = Definir.Ler_Profundidade()
+    var.altera = 0
     if(prof_sen + tol <= prof):
         while(prof_sen + tol <= prof):                                              ##Se a profundidade atual for menor que a pretendida
             Fator_dm = Degrau(prof_sen, prof)   
+            if(var.altera == 1):break
             Pot = Motores[0].Pot_Disponivel * Fator_dm * var.velocidade / 100       ##Calcula a potencia que é pretendida fornecer ao motor
             if(Motores[0].Ativo == 0 or round(Motores[0].Pot) != round(Pot)):                     ##Ativa os motores
-                print("Comparei" + str(Motores[0].Pot) + " com " + str(Pot))
-                Signal = (Pot / R_trans) + Base
+                Signal = (Pot / R_trans_T100) + Base
                 Motores[0] = Ativar_Motor(Motores[0], Signal, 0)
             if(Motores[1].Ativo == 0  or round(Motores[1].Pot) != round(Pot)):
-                Signal = (Pot / R_trans) + Base
+                Signal = (Pot / R_trans_T100) + Base
                 Motores[1] = Ativar_Motor(Motores[1], Signal, 1)
             prof_sen = Definir.Ler_Profundidade()
     elif(prof_sen + tol >= prof):
         while(prof_sen + tol >= prof):                                               ##Se a profundidade atual for maior que a pretendida
-            Fator_dm = Degrau(prof_sen, prof)
+            Fator_dm = Degrau(prof_sen, prof)  
+            if(var.altera == 1):break
             Pot = Motores[0].Pot_Disponivel * Fator_dm * var.velocidade / 100        ##Calcula a potencia que é pretendida enviar
             if(Motores[0].Ativo == 0 or round(abs(Motores[0].Pot)) != round(Pot)):                      ##Ativa os motores
-                print("Comparei" + str(Motores[0].Pot) + " com " + str(Pot))
-                Signal =  Base - (Pot / R_trans)
+                Signal =  Base - (Pot / R_trans_T100)
                 Motores[0] = Ativar_Motor(Motores[0], Signal, 0)
             if(Motores[1].Ativo == 0 or round(abs(Motores[1].Pot)) != round(Pot)):
-                Signal = Base - (Pot / R_trans)
+                Signal = Base - (Pot / R_trans_T100)
                 Motores[1] = Ativar_Motor(Motores[1], Signal, 1)
             prof_sen = Definir.Ler_Profundidade()
     print("saí da altera profundidade")
     Desliga_Motor(Motores[0], 0)
     Desliga_Motor(Motores[1], 1)
-    var.altera = 0
     return Motores
 
