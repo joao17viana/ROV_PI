@@ -56,7 +56,7 @@ def CarregaMotores():
 def SetUp_Lampada():
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(pino_luz,GPIO.OUT)                               ##Define o pino_luz com opino de saida
-    luz=GPIO.PWM(pino_luz, 1)                                   ##Define parametro "luz" como um objeto
+    luz=GPIO.PWM(pino_luz, 1000)                                   ##Define parametro "luz" como um objeto
     luz.start(desliga)                                          ##Inicializa a luz desligada
     GPIO.setwarnings(False)
     return luz

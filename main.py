@@ -104,7 +104,7 @@ def read_arduino():
                     #var.profundidade_atual = float(line[14:19]) * 100    #Update depth and convert to cm
                     #var.Vprof = Definir.Atualiza_Vetor_prof(var.profundidade_atual, var.Vprof)
                     #print(var.profundidade_atual)                                      
-                    client.publish("test",line)                          #Send "line" to interface       
+                    client.publish("sensores",line)                          #Send "line" to interface       
                     client.subscribe("motores")                          #Subscribe the topic where the interface is sending the inputs
             if exit_event.is_set():
                  break

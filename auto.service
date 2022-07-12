@@ -1,0 +1,27 @@
+[Unit]
+
+After=multi-user.target
+
+[Service]
+
+WorkingDirectory=/home/pi/operacao_ariel
+User=pi
+Group=pi
+ExecStart=/usr/bin/python3 /home/pi/operacao_ariel/main.py
+
+[Install]
+
+WantedBy=multi-user.targer
+
+
+
+
+
+
+
+
+
+
+
+
+

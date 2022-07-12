@@ -257,9 +257,9 @@ def Degrau(prof_sen, prof):
     Deg = prof - prof_sen   
     if(Deg < 0):
         Deg = -1 * Deg
-    if(Deg >= 50):                                          ##Se estiver longe, não diminui
+    if(Deg >= 30):                                          ##Se estiver longe, não diminui
         return Total
-    elif(Deg >= 25):                                        ##Se a aproximar-se, diminuis com um fator de 0.75
+    elif(Deg >= 10):                                        ##Se a aproximar-se, diminuis com um fator de 0.75
         return Prox
     else:
         return Mt_prox                                      ##Se estiver muito proximo diminui a velocidade com um fator de 0.25
